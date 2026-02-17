@@ -4,7 +4,7 @@
   "description": "NexGen Widget Manager for Artifactory",
   "main": "index.js",
   "publishConfig": {
-    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-local/"
+    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-virtual/"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
