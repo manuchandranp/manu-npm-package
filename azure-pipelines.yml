@@ -16,32 +16,28 @@ steps:
     versionSpec: '18.x'
   displayName: 'Install Node.js'
 
-# Initialize the JFrog CLI and authenticate using the Service Connection
-- task: JFrogSetup@1
-  inputs:
-    artifactoryConnection: $(artifactoryService)
-  displayName: 'Setup JFrog CLI'
-
 # Configure npm to use the CLI's resolver
 - script: |
     jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
   displayName: 'JFrog npm Config'
 
-# Install dependencies through the CLI (records dependencies for Build Info)
-- script: |
-    jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+# Install dependencies through the JFrog CLI (records dependencies for Build Info)
+- task: JfrogCliV2@1
+  inputs:
+    jfrogPlatformConnection: '$(artifactoryService)'
+    command: 'jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
   displayName: 'npm Install'
 
 - script: |
     npm run build
   displayName: 'npm Build'
 
-# Pack and Publish via CLI
+# Pack and Publish via JFrog CLI
 - script: |
     jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
   displayName: 'JFrog npm Publish'
 
-# Push the Build Info to Artifactory (the "X-Ray" view of your build)
+# Push the Build Info to Artifactory
 - script: |
     jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
   displayName: 'Publish Build Info'
