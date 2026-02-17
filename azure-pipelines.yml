@@ -5,9 +5,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  # The name of your Artifactory Service Connection
   artifactoryService: 'hts2-npm2'
-  # The Artifactory repository name
   targetRepo: 'manu-npm-virtual'
 
 steps:
@@ -16,15 +14,24 @@ steps:
     versionSpec: '18.x'
   displayName: 'Install Node.js'
 
-# Configure npm to use the CLI's resolver
-- script: |
-    jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
-  displayName: 'JFrog npm Config'
-
-# Install dependencies through the JFrog CLI (records dependencies for Build Info)
+# 1. Initialize the JFrog CLI with your connection
 - task: JfrogCliV2@1
   inputs:
-    jfrogPlatformConnection: '$(artifactoryService)'
+    jfrogPlatformConnection: $(artifactoryService)
+    command: 'jf setup'
+  displayName: 'Setup JFrog CLI'
+
+# 2. Configure the npm repositories
+- task: JfrogCliV2@1
+  inputs:
+    jfrogPlatformConnection: $(artifactoryService)
+    command: 'jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)'
+  displayName: 'JFrog npm Config'
+
+# 3. Install dependencies (collects build info)
+- task: JfrogCliV2@1
+  inputs:
+    jfrogPlatformConnection: $(artifactoryService)
     command: 'jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
   displayName: 'npm Install'
 
@@ -32,12 +39,16 @@ steps:
     npm run build
   displayName: 'npm Build'
 
-# Pack and Publish via JFrog CLI
-- script: |
-    jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+# 4. Publish the package
+- task: JfrogCliV2@1
+  inputs:
+    jfrogPlatformConnection: $(artifactoryService)
+    command: 'jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
   displayName: 'JFrog npm Publish'
 
-# Push the Build Info to Artifactory
-- script: |
-    jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
+# 5. Push Build Info to Artifactory
+- task: JfrogCliV2@1
+  inputs:
+    jfrogPlatformConnection: $(artifactoryService)
+    command: 'jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)'
   displayName: 'Publish Build Info'
