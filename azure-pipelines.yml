@@ -1,51 +1,47 @@
-name: Publish NPM Package to JFrog
+trigger:
+- main
 
-on:
-  workflow_call:
-    inputs:
-      jfrog-url:
-        required: true
-        type: string
-      build-name:
-        required: false
-        type: string
-      build-number:
-        required: false
-        type: string
-    secrets:
-      JFROG_ACCESS_TOKEN:
-        required: true
+pool:
+  vmImage: 'ubuntu-latest'
 
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository (for Git metadata)
-        uses: actions/checkout@v5
+variables:
+  # The name of your Artifactory Service Connection
+  artifactoryService: 'hts2-npm2'
+  # The Artifactory repository name
+  targetRepo: 'manu-npm-virtual'
 
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+  displayName: 'Install Node.js'
 
-      - name: Configure JFrog CLI
-        env:
-          JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
-        run: |
-          jf config add artifactory-server \
-            --url="${{ inputs.jfrog-url }}" \
-            --access-token="$JFROG_ACCESS_TOKEN" \
-            --interactive=false
+# Initialize the JFrog CLI and authenticate using the Service Connection
+- task: JFrogSetup@1
+  inputs:
+    artifactoryConnection: $(artifactoryService)
+  displayName: 'Setup JFrog CLI'
 
-      - name: Publish build info (including npm module)
-        if: ${{ inputs['build-name'] != '' && inputs['build-number'] != '' }}
-        run: |
-          echo "Collecting npm module info for build..."
-          jf rt bad "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" .
-          echo "Attaching artifacts..."
-          jf rt bag "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" .
-          echo "Collecting environment info..."
-          jf rt bce "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}"
-          echo "Publishing build info to Artifactory..."
-          jf rt bp "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" --server-id=artifactory-server
-          echo "✅ Build info published for ${{ inputs['build-name'] }} #${{ inputs['build-number'] }}"
+# Configure npm to use the CLI's resolver
+- script: |
+    jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
+  displayName: 'JFrog npm Config'
+
+# Install dependencies through the CLI (records dependencies for Build Info)
+- script: |
+    jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+  displayName: 'npm Install'
+
+- script: |
+    npm run build
+  displayName: 'npm Build'
+
+# Pack and Publish via CLI
+- script: |
+    jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+  displayName: 'JFrog npm Publish'
+
+# Push the Build Info to Artifactory (the "X-Ray" view of your build)
+- script: |
+    jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
+  displayName: 'Publish Build Info'
