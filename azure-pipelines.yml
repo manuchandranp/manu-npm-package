@@ -1,21 +1,61 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
-trigger:
-- main
-
-pool:
-  vmImage: ubuntu-latest
-
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
-
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+name: "JFrog Integration"
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+env:
+  MajorVersion: '0'
+  MinorVersion: '1'
+  PrototypeAPIUrl: http://placeholder
+  system_debug: 'false'
+  
+jobs:
+  build:
+     runs-on: windows-latest
+       
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v4.1.0
+         
+       - name: Setup JFrog CLI
+         uses: jfrog/setup-jfrog-cli@v4
+         env:  
+           JF_URL: https://hts2.jfrog.io
+           JF_ACCESS_TOKEN: cmVmdGtuOjAxOjE4MDI4NjM5NjU6WWhob25MTWp1OHdoNXBCRDNXUkMyT0NXNW1l
+           
+       - name: Setup Node npm
+         uses: actions/setup-node@v4.0.0
+         with:
+           node-version: 20.3.1
+           
+       - name: Set CLI Config
+         run: jf npm-config --repo-resolve=manu-npm-virtual  --repo-deploy=manu-npm-virtual  
+           
+       - name: Install Deps
+         run: jf npm install jquery
+        
+         
+       - name: Build Project
+         run: jf npm run
+         
+         
+       - name: "Test npm publish of scoped package"
+         run: |
+          #Create a new version of @viaplay/cicd-npm-publish-tester, copy forward, bump version and publish it!
+          mkdir -p app
+          cp package.json app/package.json
+          cd app
+          npm version patch
+          jf npm publish
+          cd ..   
+        
+         
+       - name: Publish Build info With JFrog CLI
+         run: |
+          # Collect environment variables for the build
+          jf rt build-collect-env
+          # Collect VCS details from git and add them to the build
+          jf rt build-add-git
+          # Publish build info
+          jf rt build-publish
+        
