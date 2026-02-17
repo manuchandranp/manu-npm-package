@@ -14,39 +14,25 @@ steps:
     versionSpec: '18.x'
   displayName: 'Install Node.js'
 
-# 1. Initialize the JFrog CLI with your connection
+# Use the task to run the install - it handles auth for you!
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
-    command: 'jf setup'
-  displayName: 'Setup JFrog CLI'
-
-# 2. Configure the npm repositories
-- task: JfrogCliV2@1
-  inputs:
-    jfrogPlatformConnection: $(artifactoryService)
-    command: 'jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)'
-  displayName: 'JFrog npm Config'
-
-# 3. Install dependencies (collects build info)
-- task: JfrogCliV2@1
-  inputs:
-    jfrogPlatformConnection: $(artifactoryService)
-    command: 'jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
+    command: 'jf npm install --repo-resolve=$(targetRepo) --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
   displayName: 'npm Install'
 
 - script: |
     npm run build
   displayName: 'npm Build'
 
-# 4. Publish the package
+# Use the task to publish
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
-    command: 'jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
+    command: 'jf npm publish --repo-deploy=$(targetRepo) --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)'
   displayName: 'JFrog npm Publish'
 
-# 5. Push Build Info to Artifactory
+# Finalize Build Info
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
