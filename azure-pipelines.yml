@@ -11,7 +11,7 @@ variables:
 steps:
 - task: NodeTool@0
   inputs:
-    versionSpec: '18.x'
+    versionSpec: '25.6.1'
   displayName: 'Install Node.js'
 
 # 1. Standard Bash for shell operations (mkdir)
