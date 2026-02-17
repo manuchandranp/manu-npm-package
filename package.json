@@ -1,20 +1,14 @@
 {
-  "name": "manu-npm-package",
-  "version": "1.0.1",
-  "description": "An NPM package built via Azure Pipelines and hosted in JFrog Artifactory",
+  "name": "@nexxe/nexgen-widget-manager",
+  "version": "3.6.1",
+  "description": "NexGen Widget Manager for Artifactory",
   "main": "index.js",
-  "scripts": {
-    "build": "echo 'No build step defined'",
-    "test": "echo 'No tests defined'"
-  },
-  "keywords": [
-    "azure-pipelines",
-    "jfrog",
-    "artifactory"
-  ],
-  "author": "Manu Chandran",
-  "license": "ISC",
   "publishConfig": {
-    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-virtual/"
-  }
+    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-local/"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Manu",
+  "license": "ISC"
 }
