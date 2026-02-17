@@ -1,53 +1,51 @@
-name: JFrog Integration
+name: Publish NPM Package to JFrog
 
-trigger:
-  - main # or your specific branch
-
-variables:
-  MajorVersion: '0'
-  MinorVersion: '1'
-  PrototypeAPIUrl: 'http://placeholder'
-  system_debug: 'false'
-  JF_URL: 'https://hts2.jfrog.io'
-  # It is safer to store this in Azure Library Secrets rather than plain text
-  JF_ACCESS_TOKEN: 'cmVmdGtuOjAxOjE4MDI4NjM5NjU6WWhob25MTWp1OHdoNXBCRDNXUkMyT0NXNW1l'
+on:
+  workflow_call:
+    inputs:
+      jfrog-url:
+        required: true
+        type: string
+      build-name:
+        required: false
+        type: string
+      build-number:
+        required: false
+        type: string
+    secrets:
+      JFROG_ACCESS_TOKEN:
+        required: true
 
 jobs:
-- job: Build
-  pool:
-    vmImage: 'windows-latest'
-  steps:
-  - checkout: self
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (for Git metadata)
+        uses: actions/checkout@v5
 
-  # Azure doesn't use "uses: jfrog/setup-jfrog-cli". 
-  # You must install the JFrog Extension in your Azure DevOps Org 
-  # and use the specific JFrog tasks, or install the CLI via script.
-  - script: |
-      curl -fL https://getcli.jfrog.io | powershell
-      jf npm-config --repo-resolve=manu-npm-virtual --repo-deploy=manu-npm-virtual
-    displayName: 'Install JFrog CLI & Config'
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
 
-  - task: NodeTool@0
-    inputs:
-      versionSpec: '20.3.1'
-    displayName: 'Install Node.js'
+      - name: Configure JFrog CLI
+        env:
+          JFROG_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+        run: |
+          jf config add artifactory-server \
+            --url="${{ inputs.jfrog-url }}" \
+            --access-token="$JFROG_ACCESS_TOKEN" \
+            --interactive=false
 
-  - script: |
-      jf npm install jquery
-      jf npm run
-    displayName: 'Install and Build'
-
-  - script: |
-      mkdir app
-      copy package.json app\package.json
-      cd app
-      npm version patch
-      jf npm publish
-    displayName: 'Test npm publish'
-
-  - script: |
-      jf rt build-collect-env
-      jf rt build-add-git
-      jf rt build-publish
-    displayName: 'Publish Build Info'
-        
+      - name: Publish build info (including npm module)
+        if: ${{ inputs['build-name'] != '' && inputs['build-number'] != '' }}
+        run: |
+          echo "Collecting npm module info for build..."
+          jf rt bad "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" .
+          echo "Attaching artifacts..."
+          jf rt bag "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" .
+          echo "Collecting environment info..."
+          jf rt bce "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}"
+          echo "Publishing build info to Artifactory..."
+          jf rt bp "${{ inputs['build-name'] }}" "${{ inputs['build-number'] }}" --server-id=artifactory-server
+          echo "✅ Build info published for ${{ inputs['build-name'] }} #${{ inputs['build-number'] }}"
