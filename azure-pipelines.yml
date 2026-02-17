@@ -15,8 +15,10 @@ steps:
   displayName: 'Install Node.js'
 - task: JFrogToolsInstaller@1
   inputs:
-      artifactoryConnection: 'hts2-npm'
-      cliInstallationRepo: 'jfrog-cli-v2-new'
+    artifactoryConnection: 'hts2-npm'
+    cliInstallationRepo: 'jfrog-cli-v2-new'
+    installCustomVersion: true
+    cliVersion: '2.91.0'
 
 # 1. Standard Bash for shell operations (mkdir)
 - script: |
