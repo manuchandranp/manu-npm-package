@@ -5,7 +5,9 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  # The name of your JFrog Platform Service Connection in Azure DevOps
   artifactoryService: 'hts2-npm2'
+  # The name of your Artifactory virtual/local repository
   targetRepo: 'manu-npm-virtual'
 
 steps:
@@ -14,15 +16,26 @@ steps:
     versionSpec: '18.x'
   displayName: 'Install Node.js'
 
-# RUN EVERYTHING IN ONE JFROG TASK
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
-    # We use a multi-line command to keep the session alive
+    # We run all commands in a single task to maintain a single authenticated session
     command: |
+      # 1. Fix the npm cache directory bug for hosted agents
+      mkdir -p $(HOME)/.npm/_cacache
+      
+      # 2. Configure the CLI for this project (non-interactive)
       jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
+      
+      # 3. Install dependencies and record them in the Build Info
       jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+      
+      # 4. Standard build step
       npm run build
+      
+      # 5. Publish the package to Artifactory
       jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+      
+      # 6. Publish the Build Info (Metadata) to the Artifactory "Builds" tab
       jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
-  displayName: 'JFrog: Config, Install, Build, and Publish'
+  displayName: 'JFrog CLI: Install, Build, and Publish'
