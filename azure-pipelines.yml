@@ -17,7 +17,7 @@ steps:
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
-    command: 'jf npm config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)'
+    command: 'jf npm-config --global=true --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)'
   displayName: 'JFrog npm Config'
 
 - task: JfrogCliV2@1
