@@ -13,6 +13,10 @@ steps:
   inputs:
     versionSpec: '25.6.1'
   displayName: 'Install Node.js'
+- task: JFrogToolsInstaller@1
+  inputs:
+      artifactoryConnection: 'hts2-npm'
+      cliInstallationRepo: 'jfrog-cli-v2-new'
 
 # 1. Standard Bash for shell operations (mkdir)
 - script: |
