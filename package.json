@@ -1,6 +1,6 @@
 {
   "name": "@nexxe/nexgen-widget-manager",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "description": "NexGen Widget Manager for Artifactory",
   "main": "index.js",
   "publishConfig": {
