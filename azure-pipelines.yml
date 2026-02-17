@@ -26,6 +26,6 @@ steps:
     command: |
       jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
       jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
-      jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
+      jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --run-native
   #jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
   displayName: 'JFrog CLI: Config, Install, and Publish'
