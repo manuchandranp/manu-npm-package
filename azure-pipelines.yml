@@ -1,3 +1,13 @@
+parameters:
+  - name: environment
+    displayName: Target Environment
+    type: string
+    default: 'production'
+    values:
+      - development
+      - staging
+      - production
+
 trigger:
 - main
 
@@ -6,13 +16,16 @@ pool:
 
 variables:
   artifactoryService: 'hts2-npm2'
-  targetRepo: 'manu-npm-release'
+  targetRepo: 'manu-npm-local'
+  # Added a default for this variable used in your promotion task
+  promotionStatus: 'Released' 
 
 steps:
 - task: NodeTool@0
   inputs:
     versionSpec: '25.6.1'
   displayName: 'Install Node.js'
+
 - task: JFrogToolsInstaller@1
   inputs:
     artifactoryConnection: 'hts2-npm'
@@ -25,7 +38,7 @@ steps:
     mkdir -p $(HOME)/.npm/_cacache
   displayName: 'Initialize npm cache'
 
-# 2. Consolidated JFrog Task (No comments, only jf commands)
+# 2. Consolidated JFrog Task
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
@@ -35,3 +48,20 @@ steps:
       jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
       jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
   displayName: 'JFrog CLI: Config, Install, and Publish'
+
+# 3. Build Promotion
+- task: JFrogBuildPromotion@1
+  inputs:
+    artifactoryConnection: 'hts2-npm'
+    buildName: '$(Build.DefinitionName)'
+    buildNumber: '$(Build.BuildNumber)'
+    projectKey: 'npm-test'
+    targetRepo: 'manu-npm-local'
+    status: '$(promotionStatus)'
+    sourceRepo: 'manu-npm-release'
+    includeDependencies: false
+    copy: false
+    dryRun: false
+    # Parameters must be referenced with ${{ parameters.NAME }}
+    comment: 'Promoted to ${{ parameters.environment }} by $(Build.RequestedFor) - Build $(Build.BuildNumber)'
+  displayName: 'Promote Build to Artifactory'
