@@ -6,7 +6,7 @@ pool:
 
 variables:
   artifactoryService: 'hts2-npm2'
-  targetRepo: 'manu-npm-release'
+  targetRepo: 'manu-npm-virtual'
 
 steps:
 - task: NodeTool@0
