@@ -1,10 +1,10 @@
 {
   "name": "@nexxe/nexgen-widget-manager",
-  "version": "3.6.5",
+  "version": "3.6.3",
   "description": "NexGen Widget Manager for Artifactory",
   "main": "index.js",
   "publishConfig": {
-    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-release/"
+    "registry": "https://hts2.jfrog.io/artifactory/api/npm/manu-npm-virtual/"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
