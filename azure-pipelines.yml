@@ -17,8 +17,9 @@ pool:
 variables:
   artifactoryService: 'hts2-npm2'
   targetRepo: 'manu-npm-local'
-  # Added a default for this variable used in your promotion task
-  promotionStatus: 'Released' 
+  sourceRepo: 'manu-npm-release'
+  projectKey: 'npm-test'
+  promotionStatus: 'Released'
 
 steps:
 - task: NodeTool@0
@@ -33,21 +34,21 @@ steps:
     installCustomVersion: true
     cliVersion: '2.91.0'
 
-# 1. Standard Bash for shell operations (mkdir)
+# 1. Initialize Cache
 - script: |
     mkdir -p $(HOME)/.npm/_cacache
   displayName: 'Initialize npm cache'
 
-# 2. Consolidated JFrog Task
+# 2. Build and Publish (Crucial: Added --project flag here)
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
     command: |
       jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
-      jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
-      jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber)
-      jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber)
-  displayName: 'JFrog CLI: Config, Install, and Publish'
+      jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
+      jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
+      jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber) --project=$(projectKey)
+  displayName: 'JFrog CLI: Build and Publish to Project'
 
 # 3. Build Promotion
 - task: JFrogBuildPromotion@1
@@ -55,13 +56,12 @@ steps:
     artifactoryConnection: 'hts2-npm'
     buildName: '$(Build.DefinitionName)'
     buildNumber: '$(Build.BuildNumber)'
-    projectKey: 'npm-test'
-    targetRepo: 'manu-npm-local'
+    projectKey: '$(projectKey)'
+    targetRepo: '$(targetRepo)'
     status: '$(promotionStatus)'
-    sourceRepo: 'manu-npm-release'
+    sourceRepo: '$(sourceRepo)'
     includeDependencies: false
     copy: false
     dryRun: false
-    # Parameters must be referenced with ${{ parameters.NAME }}
     comment: 'Promoted to ${{ parameters.environment }} by $(Build.RequestedFor) - Build $(Build.BuildNumber)'
-  displayName: 'Promote Build to Artifactory'
+  displayName: 'Promote Build within Project'
