@@ -16,9 +16,7 @@ pool:
 
 variables:
   artifactoryService: 'hts2-npm2'
-  # This is where 'jf npm publish' sends the files
   devRepo: 'manu-npm-local'
-  # This is where you want to promote them to
   releaseRepo: 'manu-npm-release'
   projectKey: 'npm-test'
   promotionStatus: 'Released'
@@ -43,7 +41,6 @@ steps:
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
     command: |
-      # We deploy to the DEV/LOCAL repo first
       jf npm-config --repo-resolve=$(devRepo) --repo-deploy=$(devRepo)
       jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
       jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
@@ -56,9 +53,7 @@ steps:
     buildName: '$(Build.DefinitionName)'
     buildNumber: '$(Build.BuildNumber)'
     projectKey: '$(projectKey)'
-    # SOURCE is where the files are now (local)
     sourceRepo: '$(devRepo)'
-    # TARGET is where they are going (release)
     targetRepo: '$(releaseRepo)'
     status: '$(promotionStatus)'
     includeDependencies: false
