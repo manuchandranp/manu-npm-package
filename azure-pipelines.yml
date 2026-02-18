@@ -16,8 +16,10 @@ pool:
 
 variables:
   artifactoryService: 'hts2-npm2'
-  targetRepo: 'manu-npm-local'
-  sourceRepo: 'manu-npm-release'
+  # This is where 'jf npm publish' sends the files
+  devRepo: 'manu-npm-local'
+  # This is where you want to promote them to
+  releaseRepo: 'manu-npm-release'
   projectKey: 'npm-test'
   promotionStatus: 'Released'
 
@@ -34,34 +36,33 @@ steps:
     installCustomVersion: true
     cliVersion: '2.91.0'
 
-# 1. Initialize Cache
-- script: |
-    mkdir -p $(HOME)/.npm/_cacache
+- script: mkdir -p $(HOME)/.npm/_cacache
   displayName: 'Initialize npm cache'
 
-# 2. Build and Publish (Crucial: Added --project flag here)
 - task: JfrogCliV2@1
   inputs:
     jfrogPlatformConnection: $(artifactoryService)
     command: |
-      jf npm-config --repo-resolve=$(targetRepo) --repo-deploy=$(targetRepo)
+      # We deploy to the DEV/LOCAL repo first
+      jf npm-config --repo-resolve=$(devRepo) --repo-deploy=$(devRepo)
       jf npm install --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
       jf npm publish --build-name=$(Build.DefinitionName) --build-number=$(Build.BuildNumber) --project=$(projectKey)
       jf rt build-publish $(Build.DefinitionName) $(Build.BuildNumber) --project=$(projectKey)
-  displayName: 'JFrog CLI: Build and Publish to Project'
+  displayName: 'JFrog CLI: Build and Publish'
 
-# 3. Build Promotion
 - task: JFrogBuildPromotion@1
   inputs:
     artifactoryConnection: 'hts2-npm'
     buildName: '$(Build.DefinitionName)'
     buildNumber: '$(Build.BuildNumber)'
     projectKey: '$(projectKey)'
-    targetRepo: '$(targetRepo)'
+    # SOURCE is where the files are now (local)
+    sourceRepo: '$(devRepo)'
+    # TARGET is where they are going (release)
+    targetRepo: '$(releaseRepo)'
     status: '$(promotionStatus)'
-    sourceRepo: '$(sourceRepo)'
     includeDependencies: false
     copy: false
     dryRun: false
     comment: 'Promoted to ${{ parameters.environment }} by $(Build.RequestedFor) - Build $(Build.BuildNumber)'
-  displayName: 'Promote Build within Project'
+  displayName: 'Promote Build to Release Repo'
